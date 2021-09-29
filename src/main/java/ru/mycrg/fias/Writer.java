@@ -8,23 +8,24 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 
-public class WriterDb {
+public class Writer {
 
-    final String INSERT_INTO = "insert into %s.%s (%s) values (%s) ";
-
-    public int write(Map<Integer, String> info) {
+    public int writeValue(Map<Integer, String> info) {
         DataSource dataSource = initDataSource();
         int i = 0;
-        
+
         try (Connection connection = dataSource.getConnection();
              Statement stmt = connection.createStatement()) {
 
             for (Map.Entry<Integer, String> q: info.entrySet()) {
                 stmt.executeUpdate(q.getValue());
                 i++;
+                if (i == 100000) {
+                    break;
+                }
             }
         } catch (SQLException e) {
-            e.getMessage();
+            System.out.println(e.getMessage());
         }
 
         return i;

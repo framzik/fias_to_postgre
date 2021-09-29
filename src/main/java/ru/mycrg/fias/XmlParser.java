@@ -1,9 +1,6 @@
 package ru.mycrg.fias;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -27,7 +24,7 @@ public class XmlParser {
         this.documentBuilder = DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder();
     }
 
-    public Map<Integer, String>  parse(File xmlFile) {
+    public Map<Integer, String> parse(File xmlFile) {
         Map<Integer, String> result = new HashMap<>();
 
         try (InputStream inputStream = new FileInputStream(xmlFile) {
@@ -35,10 +32,10 @@ public class XmlParser {
             Document doc = documentBuilder.parse(inputStream);
             doc.getDocumentElement().normalize();
             NodeList nodeList = doc.getElementsByTagName("*");
-            String tableName = ((Element) nodeList.item(0)).getTagName().toLowerCase(Locale.ROOT);
-            String columnNames = "";
+            String tableName = getTableName(nodeList.item(0));
 
             for (int i = 1; i < nodeList.getLength(); i++) {
+                String columnNames = "";
                 String values = "";
                 // Get element
                 Element element = (Element) nodeList.item(i);
@@ -60,10 +57,22 @@ public class XmlParser {
         } catch (IOException | SAXException e) {
             throw new RuntimeException(e.getMessage());
         }
-        System.out.println("Hi");
 
         return result;
     }
 
+    private String getTableName(Node node) {
+        String tagName = ((Element) node).getTagName().toLowerCase(Locale.ROOT);
 
+        if ("ITEMS".equalsIgnoreCase(tagName)) {
+            NamedNodeMap attributes = node.getFirstChild().getAttributes();
+            if (attributes.getLength() == 16) {
+                return "adm_hierarchy";
+            } else if (attributes.getLength() == 11) {
+                return "mun_hierarchy";
+            }
+        }
+
+        return tagName;
+    }
 }
