@@ -6,6 +6,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
@@ -16,6 +17,7 @@ import static ru.mycrg.fias.XmlParser.TABLE_NAME;
 public class Writer {
 
     private final Logger log = LoggerFactory.getLogger(Writer.class);
+    private final String TABLE = SCHEMA + "." + TABLE_NAME;
 
     private DataSource dataSource;
 
@@ -23,16 +25,34 @@ public class Writer {
         dataSource = initDataSource();
     }
 
-    public int writeValue(Map<Integer, String> info) {
+    public int writeValue(Map<String, String> info) {
 
         int i = 0;
 
         try (Connection connection = dataSource.getConnection();
              Statement stmt = connection.createStatement()) {
 
-            for (Map.Entry<Integer, String> query: info.entrySet()) {
-                stmt.executeUpdate(query.getValue());
-                i++;
+            for (Map.Entry<String, String> query: info.entrySet()) {
+                String objectId = query.getKey();
+                String value = query.getValue();
+                String queryCount = String.format("select count(*) from %s where objectid='%s'", TABLE, objectId);
+                ResultSet rs = stmt.executeQuery(queryCount);
+
+                int count = -1;
+                if (rs.next()) {
+                    count = rs.getInt("count");
+                }
+
+                if (count == 0) {
+                    stmt.executeUpdate(value);
+                    i++;
+                } else if (count > 0) {
+                    String params = initParams(value);
+                    String queryUpdate = String.format("update %s set %s where objectid='%s';", TABLE, params,
+                                                       objectId);
+                    stmt.executeUpdate(queryUpdate);
+                    i++;
+                }
             }
         } catch (SQLException e) {
             log.error("Не удалось записать в БД: {}", e.getMessage());
@@ -41,10 +61,20 @@ public class Writer {
         return i;
     }
 
+    private String initParams(String value) {
+        String[] columns = value.substring(value.indexOf("(") + 1, value.indexOf(")")).split(",");
+        String[] values = value.substring(value.lastIndexOf("(") + 1, value.lastIndexOf(")")).split(",");
+        String params = "";
+        for (int i = 0; i < columns.length; i++) {
+            params = String.join(",", params, columns[i] + "=" + values[i]);
+        }
+        return params.substring(1);
+    }
+
     public void truncateDb() {
         try (Connection connection = dataSource.getConnection();
              Statement stmt = connection.createStatement()) {
-            stmt.execute(String.format("truncate %s.%s; ", SCHEMA, TABLE_NAME));
+            stmt.execute(String.format("truncate %s;", TABLE));
         } catch (SQLException e) {
             log.error("Не удалось очистить БД: {}", e.getMessage());
         }

@@ -18,10 +18,10 @@ public class Main {
         if (folderWithXmlFiles.listFiles() != null && folderWithXmlFiles.listFiles().length != 0) {
             List<File> fileNames = Arrays.asList(folderWithXmlFiles.listFiles());
 
-            writer.truncateDb();
+//            writer.truncateDb();
 
             fileNames.forEach(file -> {
-                Optional<Map<Integer, String>> oParse = xmlParser.parse(file);
+                Optional<Map<String, String>> oParse = xmlParser.parse(file);
                 oParse.ifPresent(writer::writeValue);
             });
         }

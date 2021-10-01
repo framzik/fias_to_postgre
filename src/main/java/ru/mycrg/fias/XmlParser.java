@@ -2,10 +2,7 @@ package ru.mycrg.fias;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -32,7 +29,7 @@ public class XmlParser {
         this.documentBuilder = DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder();
     }
 
-    public Optional<Map<Integer, String>> parse(File xmlFile) {
+    public Optional<Map<String, String>> parse(File xmlFile) {
 
         try (InputStream inputStream = new FileInputStream(xmlFile) {
         }) {
@@ -43,9 +40,10 @@ public class XmlParser {
 
             switch (name) {
                 case "ADDRESSOBJECTS":
-                    return parseAddrObj(nodeList);
                 case "ITEMS":
-                    return parseMunHierarchy(nodeList);
+                case "HOUSES":
+                    return parse(nodeList);
+                case "APARTMENTS":
             }
         } catch (IOException | SAXException e) {
             log.error("Can't parse file: {} ", e.getMessage());
@@ -54,100 +52,61 @@ public class XmlParser {
         return Optional.empty();
     }
 
-//    private String getTableName(Node node) {
-//        String tagName = ((Element) node).getTagName().toLowerCase(Locale.ROOT);
-//
-//        if ("ITEMS".equalsIgnoreCase(tagName)) {
-//            NamedNodeMap attributes = node.getFirstChild().getAttributes();
-//            if (attributes.getLength() == 16) {
-//                return "adm_hierarchy";
-//            } else if (attributes.getLength() == 11) {
-//                return "mun_hierarchy";
-//            }
-//        }
-//
-//        return tagName;
-//    }
-
-    private Optional<Map<Integer, String>> parseMunHierarchy(NodeList nodeList) {
-        Map<Integer, String> result = new HashMap<>();
+    private Optional<Map<String, String>> parse(NodeList nodeList) {
+        Map<String, String> result = new HashMap<>();
+        String name = nodeList.item(0).getNodeName();
         for (int i = 1; i < nodeList.getLength(); i++) {
-            String columnNames = "";
-            String values = "";
-
             Element element = (Element) nodeList.item(i);
             NamedNodeMap attributes = element.getAttributes();
 
-            for (int j = 1; j < attributes.getLength(); j++) {
-                String nodeName = attributes.item(j).getNodeName();
-                if (checkColumnName(nodeName)) {
-                    String nodeValue = attributes.item(j).getNodeValue().toLowerCase();
-                    // если не актуальная запись(isactive=0) - пропускаем
-                    if (nodeName.equalsIgnoreCase("isactive") && nodeValue.equalsIgnoreCase("0")) {
-                        columnNames = "";
-                        values = "";
-
-                        continue;
-                    }
-                    columnNames = String.join(",", columnNames,
-                                              nodeName);
-
-                    values = String.join(",'", values,
-                                         nodeValue + "'");
-                }
+            // если не актуальная запись(isactive=0) - пропускаем
+            if (attributes.getNamedItem("ISACTIVE").getNodeValue().equalsIgnoreCase("0")) {
+                continue;
             }
-            columnNames = columnNames.substring(1);
-            values = values.substring(1);
-            String query = String.format("insert into %s.%s (%s) values (%s) ", SCHEMA, TABLE_NAME, columnNames,
-                                         values);
 
-            result.put(i, query);
+            String objectId = attributes.getNamedItem("OBJECTID").getNodeValue().toLowerCase();
+            String query = initQuery(attributes, name);
+            result.put(objectId, query);
         }
+
         return Optional.of(result);
     }
 
-    private Optional<Map<Integer, String>> parseAddrObj(NodeList nodeList) {
-        Map<Integer, String> result = new HashMap<>();
-        for (int i = 1; i < nodeList.getLength(); i++) {
-            String columnNames = "";
-            String values = "";
+    private String initQuery(NamedNodeMap attributes, String entityName) {
+        String columnNames = "";
+        String values = "";
+        for (int j = 0; j < attributes.getLength(); j++) {
+            Node node = attributes.item(j);
+            String nodeName = node.getNodeName();
+            String nodeValue = node.getNodeValue();
 
-            Element element = (Element) nodeList.item(i);
-            NamedNodeMap attributes = element.getAttributes();
-
-            for (int j = 1; j < attributes.getLength(); j++) {
-                String nodeName = attributes.item(j).getNodeName();
-                if (checkColumnName(nodeName)) {
-                    String nodeValue = attributes.item(j).getNodeValue().toLowerCase();
-                    // если не актуальная запись(isactive=0) - пропускаем
-                    if (nodeName.equalsIgnoreCase("isactive") && nodeValue.equalsIgnoreCase("0")) {
-                        columnNames = "";
-                        values = "";
-
-                        continue;
-                    }
-                    columnNames = String.join(",", columnNames,
-                                              nodeName);
-
-                    values = String.join(",'", values,
-                                         nodeValue + "'");
+            if (checkColumnName(nodeName)) {
+                if (nodeName.equalsIgnoreCase("number") && entityName.equalsIgnoreCase("APARTMENTS")) {
+                    nodeName = "apart_number";
+                } else if (nodeName.equalsIgnoreCase("number") && entityName.equalsIgnoreCase("STEADS")) {
+                    nodeName = "steads_number";
                 }
+
+                columnNames = String.join(",", columnNames, nodeName);
+
+                values = String.join(",'", values, nodeValue + "'");
             }
-            columnNames = columnNames.substring(1);
-            values = values.substring(1);
-            String query = String.format("insert into %s.%s (%s) values (%s) ", SCHEMA, TABLE_NAME, columnNames,
-                                         values);
-
-            result.put(i, query);
         }
+        columnNames = columnNames.substring(1);
+        values = values.substring(1);
 
-        return Optional.of(result);
+        return String.format("insert into %s.%s (%s) values (%s) ", SCHEMA, TABLE_NAME, columnNames,
+                             values);
     }
 
     private boolean checkColumnName(String nodeName) {
         return nodeName.equalsIgnoreCase("objectid") || nodeName.equalsIgnoreCase("objectguid")
                 || nodeName.equalsIgnoreCase("name") || nodeName.equalsIgnoreCase("typename")
                 || nodeName.equalsIgnoreCase("level") || nodeName.equalsIgnoreCase("isactive")
-                || nodeName.equalsIgnoreCase("okato") || nodeName.equalsIgnoreCase("parentobjid") ;
+                || nodeName.equalsIgnoreCase("oktmo") || nodeName.equalsIgnoreCase("parentobjid")
+                || nodeName.equalsIgnoreCase("number") || nodeName.equalsIgnoreCase("aparttype")
+                || nodeName.equalsIgnoreCase("housenum") || nodeName.equalsIgnoreCase("addnum1")
+                || nodeName.equalsIgnoreCase("housetype") || nodeName.equalsIgnoreCase("addnum2")
+                || nodeName.equalsIgnoreCase("addtype1") || nodeName.equalsIgnoreCase("addtype2");
     }
 }
