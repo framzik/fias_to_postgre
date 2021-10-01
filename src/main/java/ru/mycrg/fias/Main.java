@@ -10,19 +10,27 @@ import java.util.Optional;
 public class Main {
 
     public static void main(String[] args) throws ParserConfigurationException {
-        String folderPath = "/home/framzik/Загрузки/фиас/91/xmls";
+        String folderPath = "/home/framzik/Загрузки/фиас/91/do";
         XmlParser xmlParser = new XmlParser();
         Writer writer = new Writer();
-        File folderWithXmlFiles = new File(folderPath);
-
-        if (folderWithXmlFiles.listFiles() != null && folderWithXmlFiles.listFiles().length != 0) {
-            List<File> fileNames = Arrays.asList(folderWithXmlFiles.listFiles());
+        File xmlFile = new File(folderPath);
+        if (xmlFile.isDirectory()) {
+            if (xmlFile.listFiles() != null && xmlFile.listFiles().length != 0) {
+                List<File> fileNames = Arrays.asList(xmlFile.listFiles());
 
 //            writer.truncateDb();
 
-            fileNames.forEach(file -> {
-                Optional<Map<String, String>> oParse = xmlParser.parse(file);
-                oParse.ifPresent(writer::writeValue);
+                fileNames.forEach(file -> {
+                    Optional<Map<String, String>> oParse = xmlParser.parse(file);
+                    oParse.ifPresent(info -> {
+                        writer.writeValue(info, file);
+                    });
+                });
+            }
+        } else {
+            Optional<Map<String, String>> oParse = xmlParser.parse(xmlFile);
+            oParse.ifPresent(info -> {
+                writer.writeValue(info, xmlFile);
             });
         }
     }

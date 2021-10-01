@@ -1,7 +1,6 @@
 package ru.mycrg.fias;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -23,36 +22,32 @@ public class XmlParser {
 
     private final DocumentBuilder documentBuilder;
 
-    private final Logger log = LoggerFactory.getLogger(XmlParser.class);
+    private final Logger log = Logger.getLogger(XmlParser.class);
 
     public XmlParser() throws ParserConfigurationException {
         this.documentBuilder = DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder();
     }
 
     public Optional<Map<String, String>> parse(File xmlFile) {
+        log.info(String.format("Start parsing info from: %s", xmlFile.getName()));
+        System.out.println(String.format("Start parsing info from: %s", xmlFile.getName()));
 
         try (InputStream inputStream = new FileInputStream(xmlFile) {
         }) {
             Document doc = documentBuilder.parse(inputStream);
             doc.getDocumentElement().normalize();
             NodeList nodeList = doc.getElementsByTagName("*");
-            String name = nodeList.item(0).getNodeName();
 
-            switch (name) {
-                case "ADDRESSOBJECTS":
-                case "ITEMS":
-                case "HOUSES":
-                    return parse(nodeList);
-                case "APARTMENTS":
-            }
+            return parse(nodeList, xmlFile.getName());
         } catch (IOException | SAXException e) {
-            log.error("Can't parse file: {} ", e.getMessage());
+            log.error(String.format("Can't parse file: %s ", e.getMessage()));
+            System.out.println(String.format("Can't parse file: %s ", e.getMessage()));
         }
 
         return Optional.empty();
     }
 
-    private Optional<Map<String, String>> parse(NodeList nodeList) {
+    private Optional<Map<String, String>> parse(NodeList nodeList, String fileName) {
         Map<String, String> result = new HashMap<>();
         String name = nodeList.item(0).getNodeName();
         for (int i = 1; i < nodeList.getLength(); i++) {
@@ -68,6 +63,9 @@ public class XmlParser {
             String query = initQuery(attributes, name);
             result.put(objectId, query);
         }
+        log.info(String.format("End parsing info from: %s, prepare for writing %s raws", fileName, result.size()));
+        System.out.println(
+                (String.format("End parsing info from: %s, prepare for writing %s raws", fileName, result.size())));
 
         return Optional.of(result);
     }
