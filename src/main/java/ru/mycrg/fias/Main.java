@@ -10,7 +10,7 @@ import java.util.Optional;
 public class Main {
 
     public static void main(String[] args) throws ParserConfigurationException {
-        String folderPath = "/home/framzik/Загрузки/фиас/91/do";
+        String folderPath = args[0];
         XmlParser xmlParser = new XmlParser();
         Writer writer = new Writer();
         File xmlFile = new File(folderPath);
@@ -18,7 +18,7 @@ public class Main {
             if (xmlFile.listFiles() != null && xmlFile.listFiles().length != 0) {
                 List<File> fileNames = Arrays.asList(xmlFile.listFiles());
 
-//            writer.truncateDb();
+                writer.truncateDb();
 
                 fileNames.forEach(file -> {
                     Optional<Map<String, String>> oParse = xmlParser.parse(file);

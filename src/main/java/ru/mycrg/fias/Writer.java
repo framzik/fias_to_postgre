@@ -41,7 +41,7 @@ public class Writer {
             for (Map.Entry<String, String> query: info.entrySet()) {
                 if (i % 1000 == 0) {
                     log.info(String.format("Processing....was wrote %s raws of %s", i, info.size()));
-                    System.out.println(String.format("Was wrote %s raws of %s", i, info.size()));
+                    System.out.println(String.format("Processing....was wrote %s raws of %s", i, info.size()));
                 }
 
                 String objectId = query.getKey();
@@ -68,7 +68,8 @@ public class Writer {
             }
         } catch (SQLException e) {
             log.error(String.format("Не удалось записать в БД, sql:[%s],error: %s", queryUpdate, e.getMessage()));
-            System.out.println(String.format("Не удалось записать в БД, sql:[%s],error: %s", queryUpdate, e.getMessage()));
+            System.out.println(
+                    String.format("Не удалось записать в БД, sql:[%s],error: %s", queryUpdate, e.getMessage()));
         }
         log.info(String.format("Was wrote %s raws of %s", i, info.size()));
         System.out.println(String.format("Was wrote %s raws of %s", i, info.size()));
@@ -77,17 +78,18 @@ public class Writer {
     private String initParams(String value) {
         String[] columns = value.substring(value.indexOf("(") + 1, value.indexOf(")")).split(",");
         String valueWithoutColumns = value.substring(value.indexOf(")"));
-        String[] valuesWithRegex = valueWithoutColumns.substring(valueWithoutColumns.indexOf("(") + 1, valueWithoutColumns.lastIndexOf(")")).split("'");
+        String[] valuesWithRegex = valueWithoutColumns.substring(valueWithoutColumns.indexOf("(") + 1,
+                                                                 valueWithoutColumns.lastIndexOf(")")).split("'");
         List<String> values = new ArrayList<>();
         for (int i = 1; i < valuesWithRegex.length; i += 2) {
             values.add(valuesWithRegex[i]);
         }
         String params = "";
-        try{
+        try {
             for (int i = 0; i < columns.length; i++) {
                 params = String.join(",", params, columns[i] + "='" + values.get(i) + "'");
             }
-        }catch (IndexOutOfBoundsException e){
+        } catch (IndexOutOfBoundsException e) {
             System.out.println("Hi");
         }
 
@@ -97,7 +99,13 @@ public class Writer {
     public void truncateDb() {
         try (Connection connection = dataSource.getConnection();
              Statement stmt = connection.createStatement()) {
+            log.info(String.format("Бд будет очищена"));
+            System.out.println(String.format("Бд будет очищена"));
+
             stmt.execute(String.format("truncate %s;", TABLE));
+
+            log.info(String.format("Бд очищена"));
+            System.out.println(String.format("Бд очищена"));
         } catch (SQLException e) {
             log.error(String.format("Не удалось очистить БД: %s", e.getMessage()));
         }
