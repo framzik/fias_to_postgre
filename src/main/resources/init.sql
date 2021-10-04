@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS public.fias_address
 (
     id            bigserial NOT NULL,
-    objectid      bigint NOT NULL,
+    objectid      bigint    NOT NULL,
     name          character varying(250),
     typename      character varying(50),
     level         character varying(250),
@@ -23,3 +23,5 @@ CREATE TABLE IF NOT EXISTS public.fias_address
 
 ALTER TABLE public.fias_address
     OWNER to fiz;
+
+-- таблица строится по AS_ADDR_OBJ, AS_ADM_HIERARCHY, AS_APARTMENTS,AS_HOUSES, AS_MUN_HIERARCHY,AS_STEADS
